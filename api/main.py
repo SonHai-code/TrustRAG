@@ -1,10 +1,15 @@
 """FastAPI app.   Run:  uvicorn api.main:app --reload --port 8000   (docs at /docs)"""
+import base64
 import json
+import os
+import secrets
 import time
 from contextlib import asynccontextmanager
+from pathlib import Path
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request, Response
 from fastapi.responses import JSONResponse, StreamingResponse
+from fastapi.staticfiles import StaticFiles
 
 from api import rag, settings
 from api.llm import LLMConfigError, LLMError
@@ -22,6 +27,26 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(title="TrustRAG", version="0.2.0", lifespan=lifespan)
+
+
+@app.middleware("http")
+async def basic_auth(request: Request, call_next):
+    """Optional password wall so a public URL cannot burn your LLM budget (real auth: Phase 7)."""
+    if not (settings.BASIC_USER and settings.BASIC_PASSWORD) or request.url.path == "/health":
+        return await call_next(request)
+    ok = False
+    header = request.headers.get("authorization", "")
+    if header.lower().startswith("basic "):
+        try:
+            user, _, password = base64.b64decode(header[6:]).decode("utf-8").partition(":")
+            ok = secrets.compare_digest(user.encode(), settings.BASIC_USER.encode()) and secrets.compare_digest(
+                password.encode(), settings.BASIC_PASSWORD.encode()
+            )
+        except Exception:
+            ok = False
+    if not ok:
+        return Response(status_code=401, headers={"WWW-Authenticate": 'Basic realm="TrustRAG"'})
+    return await call_next(request)
 
 
 @app.exception_handler(RetrievalError)
@@ -85,3 +110,10 @@ async def chat_stream(req: ChatRequest):
         events(), media_type="text/event-stream",
         headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
     )
+
+
+# Serve the built React app (only when ui/dist exists, i.e. inside the Azure image).
+# Mounted last, so every API route above keeps priority.
+_UI_DIR = Path(os.getenv("UI_DIST", "ui/dist"))
+if _UI_DIR.is_dir():
+    app.mount("/", StaticFiles(directory=_UI_DIR, html=True), name="ui")

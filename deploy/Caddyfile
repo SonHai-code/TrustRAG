@@ -1,0 +1,10 @@
+# Caddy = reverse proxy + automatic HTTPS (Let's Encrypt) when DOMAIN is a real domain.
+# DOMAIN=:80 means plain HTTP on the server IP (no certificate).
+{$DOMAIN} {
+	basicauth {
+		{$BASIC_USER} {$BASIC_HASH}
+	}
+	reverse_proxy ui:80 {
+		flush_interval -1
+	}
+}

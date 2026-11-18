@@ -2,7 +2,7 @@
 from dataclasses import dataclass
 from functools import lru_cache
 
-from ingestion.config import COLLECTION, QDRANT_URL
+from ingestion.config import COLLECTION, QDRANT_API_KEY, QDRANT_URL
 
 
 class RetrievalError(RuntimeError):
@@ -18,7 +18,7 @@ class Hit:
 @lru_cache(maxsize=1)
 def _client():
     from qdrant_client import QdrantClient
-    return QdrantClient(url=QDRANT_URL)
+    return QdrantClient(url=QDRANT_URL, api_key=QDRANT_API_KEY or None)
 
 
 def warmup() -> None:

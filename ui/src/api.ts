@@ -1,6 +1,7 @@
 import type { ChatResponse, Citation, Health, SearchResponse } from "./types";
 
-const BASE = "/api"; // proxied to FastAPI by vite.config.ts
+// dev: "/api" (proxied by vite.config.ts). Single-container build sets VITE_API_BASE="" (same origin).
+const BASE: string = import.meta.env.VITE_API_BASE ?? "/api";
 
 async function fail(res: Response): Promise<never> {
   let detail = `${res.status} ${res.statusText}`;

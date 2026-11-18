@@ -1,0 +1,46 @@
+# Production stack on one server:  docker compose -f docker-compose.prod.yml up -d --build
+# Only Caddy is exposed to the internet; Qdrant and the API stay on the private Docker network.
+services:
+  qdrant:
+    image: qdrant/qdrant:latest
+    volumes: ["qdrant_data:/qdrant/storage"]
+    restart: unless-stopped
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile.api
+    env_file: .env
+    environment:
+      QDRANT_URL: http://qdrant:6333
+      HF_HOME: /models          # embedding model is cached here (2+ GB, downloaded once)
+    volumes:
+      - ./data:/app/data
+      - hf_cache:/models
+    depends_on: [qdrant]
+    restart: unless-stopped
+
+  ui:
+    build: ./ui
+    depends_on: [api]
+    restart: unless-stopped
+
+  caddy:
+    image: caddy:2
+    ports: ["80:80", "443:443"]
+    environment:
+      DOMAIN: ${DOMAIN:-:80}
+      BASIC_USER: ${BASIC_USER:-demo}
+      BASIC_HASH: ${BASIC_HASH}
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on: [ui]
+    restart: unless-stopped
+
+volumes:
+  qdrant_data:
+  hf_cache:
+  caddy_data:
+  caddy_config:

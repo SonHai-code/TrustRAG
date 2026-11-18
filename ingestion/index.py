@@ -5,12 +5,12 @@ from qdrant_client import QdrantClient
 from qdrant_client.models import Distance, PointStruct, VectorParams
 
 from ingestion.chunker import Chunk
-from ingestion.config import COLLECTION, EMBEDDING_DIM, QDRANT_URL
+from ingestion.config import COLLECTION, EMBEDDING_DIM, QDRANT_API_KEY, QDRANT_URL
 from ingestion.embed import embed_texts
 
 
 def get_client() -> QdrantClient:
-    return QdrantClient(url=QDRANT_URL)
+    return QdrantClient(url=QDRANT_URL, api_key=QDRANT_API_KEY or None)
 
 
 def ensure_collection(client: QdrantClient, recreate: bool = False) -> None:

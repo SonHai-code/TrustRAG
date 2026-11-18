@@ -16,4 +16,6 @@ LLM_TIMEOUT = float(os.getenv("LLM_TIMEOUT", "60"))
 TOP_K = int(os.getenv("TOP_K", "5"))
 # Below this top-1 retrieval score we refuse instead of letting the LLM guess.
 MIN_SCORE = float(os.getenv("MIN_SCORE", "0.35"))
+BASIC_USER = os.getenv("BASIC_USER", "")
+BASIC_PASSWORD = os.getenv("BASIC_PASSWORD", "")  # both set => every route except /health needs a login
 WARMUP = os.getenv("WARMUP", "true").lower() == "true"

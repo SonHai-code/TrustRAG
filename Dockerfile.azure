@@ -1,0 +1,22 @@
+# One container = API + built React UI. Build in the cloud:  az acr build -f Dockerfile.azure ...
+FROM node:20-alpine AS ui
+WORKDIR /ui
+COPY ui/package.json ui/package-lock.json* ./
+RUN npm install
+COPY ui/ .
+ENV VITE_API_BASE=""
+RUN npm run build
+
+FROM python:3.11-slim
+WORKDIR /app
+ENV PYTHONUNBUFFERED=1 PIP_NO_CACHE_DIR=1 HF_HOME=/models
+RUN pip install torch --index-url https://download.pytorch.org/whl/cpu
+COPY requirements.txt .
+RUN pip install -r requirements.txt
+# bake the embedding model into the image: no 2 GB download on every cold start
+RUN python -c "from sentence_transformers import SentenceTransformer; SentenceTransformer('BAAI/bge-m3')"
+COPY ingestion ./ingestion
+COPY api ./api
+COPY --from=ui /ui/dist ./ui/dist
+EXPOSE 8000
+CMD ["uvicorn", "api.main:app", "--host", "0.0.0.0", "--port", "8000"]

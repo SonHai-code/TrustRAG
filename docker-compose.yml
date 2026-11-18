@@ -1,0 +1,38 @@
+# Phase 0 stack. Start with: docker compose up -d
+services:
+  qdrant:
+    image: qdrant/qdrant:latest
+    ports: ["6333:6333", "6334:6334"]
+    volumes: ["qdrant_data:/qdrant/storage"]
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    ports: ["6379:6379"]
+    volumes: ["redis_data:/data"]
+    restart: unless-stopped
+
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-trustrag}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-trustrag_dev}
+      POSTGRES_DB: ${POSTGRES_DB:-trustrag}
+    ports: ["5432:5432"]
+    volumes: ["pg_data:/var/lib/postgresql/data"]
+    restart: unless-stopped
+
+  # Optional monitoring (used in Phase 7): docker compose --profile monitoring up -d
+  prometheus:
+    image: prom/prometheus:latest
+    profiles: ["monitoring"]
+    ports: ["9090:9090"]
+  grafana:
+    image: grafana/grafana:latest
+    profiles: ["monitoring"]
+    ports: ["3000:3000"]
+
+volumes:
+  qdrant_data:
+  redis_data:
+  pg_data:
